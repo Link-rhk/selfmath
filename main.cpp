@@ -52,7 +52,10 @@ int main(void){
     int offset=0,loop=0,ret=0;;
     expr_type *expr=nullptr;
     ret=expr_build(str,strlen(str),offset,&expr,loop);
-    if(ret==1) expr_list_show(*expr);
+    if(ret==1) {
+        expr_list_show(*expr);
+        expr_printf(*expr);
+    }
     cout<<"main.cpp end\n";
     return 0;
-}/// + 1 - 2 * 3 5
+}/// + 1 + * - 2 3 / 4 5 6

@@ -199,12 +199,12 @@ unsigned char expr_build(char *input_str,int len,int &offset,expr_type **expr,in
                     }
                 }
                 expr_add_elem(*expr_cont,1,&num);
-                cout<<OUTPUT_INFO<<"numb "<<num<<"\n";
+                // cout<<OUTPUT_INFO<<"numb "<<num<<"\n";
             }
 
             //需要考虑括号与数字的组合关系
             if(type==TYPE_RIGHT){//the end of this expr_build.
-                cout<<OUTPUT_INFO<<"TYPE_RIGHT\n";
+                // cout<<OUTPUT_INFO<<"TYPE_RIGHT\n";
                 if(expr_cont!=nullptr){//insert the numb-data at the end of expr.
                     expr_end->next=expr_cont;
                     expr_end=expr_find_end(*expr_cont);
@@ -217,19 +217,19 @@ unsigned char expr_build(char *input_str,int len,int &offset,expr_type **expr,in
             }else if(type==TYPE_LEFT){//into a new expr_build-function.
                 int offset=0;//考虑到打印时应该注意括号的添加情况
                 expr_type *sub_expr=nullptr;
-                cout<<OUTPUT_INFO<<"TYPE_LEFT\n";
+                // cout<<OUTPUT_INFO<<"TYPE_LEFT\n";
                 if(expr_build(input_str+i+1,len-i-1,offset,&sub_expr,loop_deep)==0){
                     expr_type_free(*expr_head);
                     return 0;
                 }
                 i+=offset;
-                cout<<OUTPUT_INFO<<offset<<"|"<<*(input_str+i)<<"|TYPE_LEFT\n";
+                // cout<<OUTPUT_INFO<<offset<<"|"<<*(input_str+i)<<"|TYPE_LEFT\n";
                 expr_cont=sub_expr;
 
                 //pre_type=TYPE_RIGHT;
                 cout<<OUTPUT_INFO<<"|TYPE_LEFT\n";
             }else /* if(type==TYPE_OPER) */{//the insert of oper.it will insert the head of expr.
-                cout<<OUTPUT_INFO<<pre_type<<"|"<<type<<":"<<*(input_str+i)<<"\n";
+                // cout<<OUTPUT_INFO<<pre_type<<"|"<<type<<":"<<*(input_str+i)<<"\n";
                 expr_type *new_expr=new expr_type();
                 if(new_expr==nullptr){
                     cout<<OUTPUT_INFO<<"malloc failed!!\n";
@@ -240,13 +240,14 @@ unsigned char expr_build(char *input_str,int len,int &offset,expr_type **expr,in
 
                 //append oper.
                 if(expr_head==nullptr){
-                    cout<<OUTPUT_INFO<<"expr_head==nullptr\n";
+                    // cout<<OUTPUT_INFO<<"expr_head==nullptr\n";
                     expr_head=new_expr;
                     expr_end=new_expr;
                     write_oper=expr_head;
-                }else{
-                    if(pre_type>=type){//insert the oper-data at the start of expr.it means the expression will be the left one.
-                        cout<<OUTPUT_INFO<<"pre_type>=type\n";
+                }else{                    
+                    if(pre_type>type){
+                    //insert the oper-data before a expr. it means that expr will be the left one of this oper.
+                        // cout<<OUTPUT_INFO<<"pre_type>=type\n";
                         if(write_oper==expr_head){
                             new_expr->next=expr_head;
                             expr_head=new_expr;
@@ -254,9 +255,12 @@ unsigned char expr_build(char *input_str,int len,int &offset,expr_type **expr,in
                             new_expr->next=write_oper->next;
                             write_oper->next=new_expr;
                         }
-                    }else{//insert the oper-data at the end of expr.it means there is a new expression.
-                        cout<<OUTPUT_INFO<<"pre_type<type\n";
-                        write_oper=expr_end;
+                    }else{
+                    //insert the oper-data at the end of expr.it means there is a new expression.
+                        // cout<<OUTPUT_INFO<<"pre_type<=type\n";
+                        if(pre_type<type)
+                            write_oper=expr_end;//recode the place where oper-data will insert.
+                            
                         expr_end->next=new_expr;
                         expr_end=expr_end->next;
                     }
@@ -270,7 +274,7 @@ unsigned char expr_build(char *input_str,int len,int &offset,expr_type **expr,in
                     expr_cont=nullptr;
                 }
 
-                expr_list_show(*expr_head);
+                // expr_list_show(*expr_head);
 
                 pre_type=type;//record the type of pre-oper
             }
@@ -281,7 +285,6 @@ unsigned char expr_build(char *input_str,int len,int &offset,expr_type **expr,in
         ++offset;
     }
 
-    cout<<OUTPUT_INFO<<"|TYPE_LEFT\n";
     if(num_bit!=0){// the insert of num.it will insert the end of expr.
         char * num_str=(char*)malloc(num_bit+1);
         memcpy(num_str,input_str+len-num_bit,num_bit);
@@ -299,7 +302,6 @@ unsigned char expr_build(char *input_str,int len,int &offset,expr_type **expr,in
         expr_end=expr_end->next;
     }
 
-    cout<<OUTPUT_INFO<<"|TYPE_LEFT\n";
     *expr=expr_head;
     return 1;
 }
@@ -332,8 +334,103 @@ void expr_list_show(expr_type &expr){
     cout<<"\n";
 }
 
+/// @brief find a number in the loop.
+/// @param expr [input]the head of expr.
+/// @param str [output]recode the str should printf.it`s malloc in function.so need free after printf.
+/// @return the last expr_type has been printf.
+expr_type* find_a_numb(expr_type &expr, char **Estr){
+    if(expr.type==1){//find a numb-data
+        //INT_MAX 2147483647 strlen=10
+        char Nstr[16]={0};
+        itoa(expr.numb,Nstr,10);
+
+        *Estr=(char *)malloc(strlen(Nstr)+1+1);
+        if(*Estr==nullptr){
+            cout<<OUTPUT_INFO<<"malloc failed!!\n";
+            return &expr;
+        }
+        sprintf(*Estr,"%s%c",Nstr,expr.oper);
+        return &expr;
+    }else if(expr.next==nullptr){//find a oper-data at the end.
+        cout<<OUTPUT_INFO<<"form error!!\n";
+        return &expr;
+    }
+    expr_type *ret_expr=&expr;//init the return of this function by input-expr.
+
+    //the first data is an oper-data. and exsit next.
+    char *subL_Estr=nullptr;
+    ret_expr=find_a_numb(*expr.next,&subL_Estr);
+
+    if(subL_Estr==nullptr){//left-expr not found.
+        cout<<OUTPUT_INFO<<"ERROR\n";
+        return expr_find_end(*ret_expr);
+    }
+
+    if(ret_expr->next==nullptr){//lack a right expr of oper.
+        cout<<OUTPUT_INFO<<"form error!!\n";
+        return ret_expr;
+    }
+
+    char *subR_Estr=nullptr;
+    ret_expr=find_a_numb(*(ret_expr->next),&subR_Estr);
+    if(subR_Estr==nullptr){//right-expr not found.
+        cout<<OUTPUT_INFO<<"ERROR\n";
+        return expr_find_end(*ret_expr);
+    }
+
+    *Estr=(char *)malloc(strlen(subL_Estr)+1+strlen(subR_Estr)+4+1);
+    sprintf(*Estr,"(%s)%c(%s)",subL_Estr,expr.oper,subR_Estr);
+    free(subL_Estr);
+    free(subR_Estr);
+
+    return ret_expr;//tmp return
+}
+
+//"1+(2-3)*4/5+6"
+//+ 1 + * - 2 3 / 4 5 6
 void expr_printf(expr_type &expr_head){
-    
+    if(expr_head.type==1 && expr_head.next!=nullptr){//the first data is a number while it has a next data!!
+        cout<<OUTPUT_INFO<<"form error!!\n";
+        return;
+    }else if(expr_head.type==1){//find a numb-data at the end.
+        cout<<expr_head.numb<<"\n";
+        return;
+    }else if(expr_head.next==nullptr){//find a oper-data at the end.
+        cout<<OUTPUT_INFO<<"form error!!\n";
+        return;
+    }
+
+    expr_type* ret_expr=nullptr;//point to the end of expr which had printf.
+
+    //the first data is an oper-data. and exsit next.
+    char *subL_Estr=nullptr;
+    ret_expr=find_a_numb(*expr_head.next,&subL_Estr);
+
+    if(subL_Estr==nullptr){//left-expr not found.
+        cout<<OUTPUT_INFO<<"ERROR\n";
+        return;
+    }
+
+    if(ret_expr->next==nullptr){//lack a right expr of oper.
+        cout<<OUTPUT_INFO<<"form error!!\n";
+        free(subL_Estr);
+        return;
+    }
+
+    char *subR_Estr=nullptr;
+    ret_expr=find_a_numb(*(ret_expr->next),&subR_Estr);
+    if(subR_Estr==nullptr){//right-expr not found.
+        cout<<OUTPUT_INFO<<"ERROR\n";
+        return;
+    }
+
+    char *Estr=(char *)malloc(strlen(subL_Estr)+1+strlen(subR_Estr)+1);
+    sprintf(Estr,"%s%c%s",subL_Estr,expr_head.oper,subR_Estr);
+    free(subL_Estr);
+    free(subR_Estr);
+
+    cout<<Estr<<"\n";
+    free(Estr);
 }
 
 math_expr::math_expr():expr(nullptr)
