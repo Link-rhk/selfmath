@@ -30,22 +30,81 @@ unsigned char char_Analysis(char C){
     }
 }
 
-void expr_add_elem(expr_elem &expr,unsigned char type,void *elem){
+/// @brief unpdate the deep of expression, while EXPR_BUILD_LOOP_DEEP_MAX is defined.
+/// @param expr the head of expression, need update the deep-recode.
+/// @param deep the deep of first expr_elem.
+/// @return the deep of the end of expr_elem.
+int expr_deep_update(expr_elem &expr, int deep){
+#ifdef EXPR_BUILD_LOOP_DEEP_MAX
+    expr.elem_deep=deep;
+    expr_elem *expr_next=expr.next;
+    int i=deep;
+    while(expr_next!=nullptr){
+        ++i;
+        expr_next->elem_deep=i;
+        if(i>=EXPR_BUILD_LOOP_DEEP_MAX) break;
+        expr_next=expr_next->next;
+    }
+
+    if(i>=EXPR_BUILD_LOOP_DEEP_MAX)
+        cout<<OUTPUT_INFO<<"WARNNING!! it`s out of limit.\n";
+
+    cout<<OUTPUT_INFO<<i<<"\n";
+    return i;
+#else
+    return 0;
+#endif
+}
+
+int get_expr_len(expr_elem &expr){
+#ifdef EXPR_BUILD_LOOP_DEEP_MAX
+    expr_elem *expr_next=&expr;
+    int deep=expr_next->elem_deep;
+    while(expr_next->next!=nullptr){
+        expr_next=expr_next->next;
+        deep=expr_next->elem_deep;
+        if(deep>=EXPR_BUILD_LOOP_DEEP_MAX) break;
+    }
+
+    if(deep>=EXPR_BUILD_LOOP_DEEP_MAX)
+        cout<<OUTPUT_INFO<<"WARNNING!! it`s out of limit.\n";
+
+    return deep;
+#else
+    return 0;
+#endif
+}
+
+
+/// @return the deep for the expression.
+int expr_add_elem(expr_elem &expr, int deep, unsigned char type, void *elem){
     expr.type=type;
     if(type==0){
         expr.oper=*(char*)elem;
     }else if(type==1){
         expr.numb=*(int*)elem;
     }
+
+#ifdef EXPR_BUILD_LOOP_DEEP_MAX
+    return expr_deep_update(expr,deep);
+#else
+    return 0;
+#endif
 }
 
 expr_elem* expr_find_end(expr_elem &expr){
     expr_elem *expr_end=&expr;
 
-    for(int i=0;i<EXPR_BUILD_LOOP_DEEP_MAX;++i){
+#ifdef EXPR_BUILD_LOOP_DEEP_MAX
+    for(int i=0;i<EXPR_BUILD_LOOP_DEEP_MAX;++i)
+#else
+    while(1)
+#endif
+    {
         if(expr_end->next==nullptr) return expr_end;
         expr_end=expr_end->next;
     }
+    cout<<OUTPUT_INFO<<"it out of limit!!\n";
     return nullptr;
 }
 
@@ -54,30 +113,39 @@ expr_elem *expr_set(char oper,int num0, int num1){
     expr_head=new expr_elem_type();
     if(expr_head==nullptr){
         cout<<OUTPUT_INFO<<"malloc failed!!\n";
-        expr_type_free(*expr_head);
+        expr_elem_free(*expr_head);
         return nullptr;
     }
 
+    int deep_ret=0;
     expr_elem *write_p=expr_head;
-    expr_add_elem(*write_p,0,&oper);
+    deep_ret=expr_add_elem(*write_p,0,0,&oper);
 
     write_p->next=new expr_elem_type();
     if(write_p->next==nullptr){
         cout<<OUTPUT_INFO<<"malloc failed!!\n";
-        expr_type_free(*expr_head);
+        expr_elem_free(*expr_head);
         return nullptr;
     }
+    
+    deep_ret=expr_add_elem(*(write_p->next),write_p->elem_deep+1,1,&num0);
     write_p=write_p->next;
-    expr_add_elem(*write_p,1,&num0);
 
     write_p->next=new expr_elem_type();
     if(write_p->next==nullptr){
         cout<<OUTPUT_INFO<<"malloc failed!!\n";
-        expr_type_free(*expr_head);
+        expr_elem_free(*expr_head);
         return nullptr;
     }
+    
+    deep_ret=expr_add_elem(*(write_p->next),write_p->elem_deep+1,1,&num1);
     write_p=write_p->next;
-    expr_add_elem(*write_p,1,&num1);
+
+#ifdef EXPR_BUILD_LOOP_DEEP_MAX
+    if(deep_ret>=EXPR_BUILD_LOOP_DEEP_MAX){
+        cout<<OUTPUT_INFO<<"[WARNNING]the expression is out of limit[%s]\n",deep_ret;
+    }
+#endif
 
     return expr_head;
 }
@@ -87,23 +155,33 @@ expr_elem *expr_set(char oper,int num, expr_elem &expr){
     expr_head=new expr_elem_type();
     if(expr_head==nullptr){
         cout<<OUTPUT_INFO<<"malloc failed!!\n";
-        expr_type_free(*expr_head);
+        expr_elem_free(*expr_head);
         return nullptr;
     }
 
+    int deep_ret=0;
     expr_elem *write_p=expr_head;
-    expr_add_elem(*write_p,0,&oper);
+    deep_ret=expr_add_elem(*write_p,0,0,&oper);
 
     write_p->next=new expr_elem_type();
     if(write_p->next==nullptr){
         cout<<OUTPUT_INFO<<"malloc failed!!\n";
-        expr_type_free(*expr_head);
+        expr_elem_free(*expr_head);
         return nullptr;
     }
+    
+    deep_ret=expr_add_elem(*(write_p->next),write_p->elem_deep+1,1,&num);
     write_p=write_p->next;
-    expr_add_elem(*write_p,1,&num);
 
     write_p->next=&expr;
+    deep_ret=expr_deep_update(expr,write_p->elem_deep+1);
+
+#ifdef EXPR_BUILD_LOOP_DEEP_MAX
+    if(deep_ret>=EXPR_BUILD_LOOP_DEEP_MAX){
+        cout<<OUTPUT_INFO<<"[WARNNING]the expression is out of limit[%s]\n",deep_ret;
+    }
+#endif
+
     return expr_head;
 }
 
@@ -112,23 +190,31 @@ expr_elem *expr_set(char oper,expr_elem &expr, int num){
     expr_head=new expr_elem_type();
     if(expr_head==nullptr){
         cout<<OUTPUT_INFO<<"malloc failed!!\n";
-        expr_type_free(*expr_head);
+        expr_elem_free(*expr_head);
         return nullptr;
     }
 
+    int deep_ret=0;
     expr_elem *write_p=expr_head;
-    expr_add_elem(*write_p,0,&oper);
+    deep_ret=expr_add_elem(*write_p,0,0,&oper);
 
     write_p->next=&expr;
+    deep_ret=expr_deep_update(expr,write_p->elem_deep+1);
     write_p=expr_find_end(*(write_p->next));
 
     write_p->next=new expr_elem_type();
     if(write_p->next==nullptr){
         cout<<OUTPUT_INFO<<"malloc failed!!\n";
-        expr_type_free(*expr_head);
+        expr_elem_free(*expr_head);
         return nullptr;
     }
-    expr_add_elem(*(write_p->next),1,&num);
+    deep_ret=expr_add_elem(*(write_p->next),write_p->elem_deep+1,1,&num);
+
+#ifdef EXPR_BUILD_LOOP_DEEP_MAX
+    if(deep_ret>=EXPR_BUILD_LOOP_DEEP_MAX){
+        cout<<OUTPUT_INFO<<"[WARNNING]the expression is out of limit[%s]\n",deep_ret;
+    }
+#endif
 
     return expr_head;
 }
@@ -138,17 +224,28 @@ expr_elem *expr_set(char oper,expr_elem &expr0, expr_elem &expr1){
     expr_head=new expr_elem_type();
     if(expr_head==nullptr){
         cout<<OUTPUT_INFO<<"malloc failed!!\n";
-        expr_type_free(*expr_head);
+        expr_elem_free(*expr_head);
         return nullptr;
     }
 
+    int deep_ret=0;
     expr_elem *write_p=expr_head;
-    expr_add_elem(*write_p,0,&oper);
+    deep_ret=expr_add_elem(*write_p,0,0,&oper);
 
     write_p->next=&expr0;
+    deep_ret=expr_deep_update(expr0,write_p->elem_deep+1);
+    
 
     write_p=expr_find_end(expr0);
     write_p->next=&expr1;
+    deep_ret=expr_deep_update(expr1,write_p->elem_deep+1);
+
+#ifdef EXPR_BUILD_LOOP_DEEP_MAX
+    if(deep_ret>=EXPR_BUILD_LOOP_DEEP_MAX){
+        cout<<OUTPUT_INFO<<"[WARNNING]the expression is out of limit[%s]\n",deep_ret;
+    }
+#endif
+
     return expr_head;
 }
 
@@ -167,12 +264,11 @@ expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl){
 
     int i=0,type=0,num_bit=0;
     for(i=0;i<len;++i){
-        cout<<OUTPUT_INFO<<*(Istr+i)<<"\n";
         type=char_Analysis(*(Istr+i));
         if(type==TYPE_MAX){
             cout<<OUTPUT_INFO<<"sign out of range\n";
             if(left_expr!=nullptr)
-                expr_type_free(*left_expr);
+                expr_elem_free(*left_expr);
             return nullptr;
         }else if(type==TYPE_NUM){//record the bit of num_str
             ++num_bit;
@@ -190,7 +286,7 @@ expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl){
                     cout<<OUTPUT_INFO<<"malloc failed!!\n";
                     return nullptr;
                 }
-                expr_add_elem(*tmp_expr,1,&num);
+                expr_add_elem(*tmp_expr,0,1,&num);
                 num_bit=0;
 
                 if(left_expr==nullptr){
@@ -210,7 +306,7 @@ expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl){
                 if(sub_expr==nullptr){
                     cout<<OUTPUT_INFO<<"lack right expression!!\n";
                     if(left_expr!=nullptr)
-                        expr_type_free(*left_expr);
+                        expr_elem_free(*left_expr);
                     return nullptr;
                 }
 
@@ -230,44 +326,41 @@ expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl){
                 }
 
                 if(oper_lvl>type){//the end of a expression.
-                    cout<<OUTPUT_INFO<<*(Istr+i)<<"back\n";
                     --i;
-                    cout<<OUTPUT_INFO<<*(Istr+i)<<"back to\n";
+                    // cout<<OUTPUT_INFO<<*(Istr+i)<<"back to\n";
                     break;
                 }
 
                 int sub_len=len-(i+1);//"+1" for transfor sign ot count of the str.
-                cout<<OUTPUT_INFO<<"sub_len "<<sub_len<<"\n";
-                cout<<OUTPUT_INFO<<*(Istr+i)<<"before\n";
-                cout<<"left_expr:";
-                expr_list_show(*left_expr);
+                // cout<<OUTPUT_INFO<<"sub_len "<<sub_len<<"\n";
+                // cout<<OUTPUT_INFO<<*(Istr+i)<<"before\n";
                 expr_elem* right_expr=find_a_right_expr(Istr+i+1,sub_len,type);
-                cout<<OUTPUT_INFO<<"sub_len "<<sub_len<<"\n";
-                cout<<OUTPUT_INFO<<*(Istr+len-sub_len-1)<<"after\n";
-                if(left_expr!=nullptr){
-                    cout<<"left_expr:";
-                    expr_list_show(*left_expr);
-                }
-                if(right_expr!=nullptr){
-                    cout<<"right_expr:";
-                    expr_list_show(*right_expr);
-                }
+                // cout<<OUTPUT_INFO<<"sub_len "<<sub_len<<"\n";
+                // cout<<OUTPUT_INFO<<*(Istr+len-sub_len-1)<<"after\n";
+                // if(left_expr!=nullptr){
+                //     cout<<"left_expr:";
+                //     expr_list_show(*left_expr);
+                // }
+                // if(right_expr!=nullptr){
+                //     cout<<"right_expr:";
+                //     expr_list_show(*right_expr);
+                // }
 
                 if(right_expr==nullptr){
                     cout<<OUTPUT_INFO<<"error!!\n";
-                    expr_type_free(*left_expr);
+                    expr_elem_free(*left_expr);
                     return nullptr;
                 }
                 //get the expression.
                 left_expr=expr_set(*(Istr+i),*left_expr,*right_expr);
-                if(left_expr!=nullptr){
-                    cout<<"left_expr:";
-                    expr_list_show(*left_expr);
-                }
-                cout<<OUTPUT_INFO<<(Istr+i)<<"|"<<i<<"|"<<len<<"|"<<sub_len<<"|offset\n";
+                // if(left_expr!=nullptr){
+                //     cout<<"left_expr:";
+                //     expr_list_show(*left_expr);
+                // }
+                // cout<<OUTPUT_INFO<<(Istr+i)<<"|"<<i<<"|"<<len<<"|"<<sub_len<<"|offset\n";
                 i=len-sub_len;//add the offset had been read.
                 if(sub_len==0) break;//break the for-loop for skipping ++i;
-                cout<<OUTPUT_INFO<<*(Istr+i)<<"offset\n";
+                // cout<<OUTPUT_INFO<<*(Istr+i)<<"offset\n";
             }
         }
     }
@@ -282,10 +375,10 @@ expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl){
         expr_elem *tmp_expr=new expr_elem_type();
         if(tmp_expr==nullptr){
             cout<<OUTPUT_INFO<<"malloc failed!!\n";
-            expr_type_free(*left_expr);
+            expr_elem_free(*left_expr);
             return nullptr;
         }
-        expr_add_elem(*tmp_expr,1,&num);
+        expr_add_elem(*tmp_expr,0,1,&num);
 
         if(left_expr==nullptr){
             left_expr=tmp_expr;
@@ -294,17 +387,12 @@ expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl){
             left_expr=expr_set('*',*left_expr,*tmp_expr);
         }
     }
-    // --i;//"++i" had been executed once while quiting the for-loop.
     len=len-i;//"--i;len=len-(i+1);" recode the len unread.
-    if(len>=0)
-        cout<<OUTPUT_INFO<<(Istr+i)<<"|"<<strlen(Istr+i)<<"|"<<len<<"end\n";
-    else
-        cout<<OUTPUT_INFO<<len<<"end\n";
 
-    if(left_expr!=nullptr){
-        cout<<"left_expr:";
-        expr_list_show(*left_expr);
-    }
+    // if(left_expr!=nullptr){
+    //     cout<<"left_expr:";
+    //     expr_list_show(*left_expr);
+    // }
     return left_expr;
 }
 
@@ -314,8 +402,7 @@ unsigned char expr_build(char *Istr,int len,expr_elem *&expr_head){
         return 0;
     }
 
-    cout<<OUTPUT_INFO<<"len "<<len<<"\n";
-    cout<<OUTPUT_INFO<<*Istr<<"\n";
+    // cout<<OUTPUT_INFO<<"len "<<len<<"\n";
     // expr_elem *ret_expr=nullptr;
     expr_elem *left_expr=nullptr;
 
@@ -325,7 +412,7 @@ unsigned char expr_build(char *Istr,int len,expr_elem *&expr_head){
         if(type==TYPE_MAX){
             cout<<OUTPUT_INFO<<"sign out of range\n";
             if(left_expr==nullptr)
-                expr_type_free(*left_expr);
+                expr_elem_free(*left_expr);
             return 0;
         }else if(type==TYPE_NUM){//record the bit of num_str
             ++num_bit;
@@ -343,7 +430,7 @@ unsigned char expr_build(char *Istr,int len,expr_elem *&expr_head){
                     cout<<OUTPUT_INFO<<"malloc failed!!\n";
                     return 0;
                 }
-                expr_add_elem(*tmp_expr,1,&num);
+                expr_add_elem(*tmp_expr,0,1,&num);
                 num_bit=0;
 
                 if(left_expr==nullptr){
@@ -356,6 +443,9 @@ unsigned char expr_build(char *Istr,int len,expr_elem *&expr_head){
 
             if(type==TYPE_RIGHT){//the end of a expression. but not in this function.
                 cout<<OUTPUT_INFO<<"error!!\n";
+                if(left_expr==nullptr)
+                    expr_elem_free(*left_expr);
+                return 0;
             }else if(type==TYPE_LEFT){//find a new expression.
                 int sub_len=len-i-1;
                 //this expression is always a left-expression in this function(-loop).
@@ -363,7 +453,7 @@ unsigned char expr_build(char *Istr,int len,expr_elem *&expr_head){
                 if(sub_expr==nullptr){
                     cout<<OUTPUT_INFO<<"error!!\n";
                     if(left_expr==nullptr)
-                        expr_type_free(*left_expr);
+                        expr_elem_free(*left_expr);
                     return 0;
                 }
 
@@ -383,16 +473,16 @@ unsigned char expr_build(char *Istr,int len,expr_elem *&expr_head){
                 }
 
                 int sub_len=len-(i+1);//"+1" for transfor sign ot count of the str.
-                cout<<OUTPUT_INFO<<"sub_len "<<sub_len<<"\n";
-                cout<<OUTPUT_INFO<<*(Istr+i)<<"before\n";
-                expr_list_show(*left_expr);
+                // cout<<OUTPUT_INFO<<"sub_len "<<sub_len<<"\n";
+                // cout<<OUTPUT_INFO<<*(Istr+i)<<"before\n";
+                // expr_list_show(*left_expr);
                 expr_elem* right_expr=find_a_right_expr(Istr+i+1,sub_len,type);
-                cout<<OUTPUT_INFO<<"sub_len "<<sub_len<<"\n";
-                cout<<OUTPUT_INFO<<*(Istr+len-sub_len-1)<<"after\n";
-                expr_list_show(*right_expr);
+                // cout<<OUTPUT_INFO<<"sub_len "<<sub_len<<"\n";
+                // cout<<OUTPUT_INFO<<*(Istr+len-sub_len-1)<<"after\n";
+                // expr_list_show(*right_expr);
                 if(right_expr==nullptr){
                     cout<<OUTPUT_INFO<<"error!!\n";
-                    expr_type_free(*left_expr);
+                    expr_elem_free(*left_expr);
                     return 0;
                 }
                 //get the expression.
@@ -415,10 +505,10 @@ unsigned char expr_build(char *Istr,int len,expr_elem *&expr_head){
         expr_elem *tmp_expr=new expr_elem_type();
         if(tmp_expr==nullptr){
             cout<<OUTPUT_INFO<<"malloc failed!!\n";
-            expr_type_free(*left_expr);
+            expr_elem_free(*left_expr);
             return 0;
         }
-        expr_add_elem(*tmp_expr,1,&num);
+        expr_add_elem(*tmp_expr,0,1,&num);
 
         if(left_expr==nullptr){
             left_expr=tmp_expr;
@@ -432,7 +522,7 @@ unsigned char expr_build(char *Istr,int len,expr_elem *&expr_head){
     return 1;
 }
 
-void expr_type_free(expr_elem &data){
+void expr_elem_free(expr_elem &data){
     expr_elem *free_p=&data;
     expr_elem *next_p=nullptr;
     do{
@@ -637,7 +727,7 @@ math_expr::math_expr(char *srt, int len):expr(nullptr)
 
         if(ret==SIGN_TOOLS_MAX){
             cout<<OUTPUT_INFO<<"sign out of range\n";
-            expr_type_free(*expr);
+            expr_elem_free(*expr);
             return;
         }else if(ret=SIGN_TOOLS_MAX+1){//record the bit of num_str
             ++num_bit;
@@ -726,5 +816,5 @@ expr_elem_type::expr_elem_type()
 expr_elem_type::~expr_elem_type()
 {
     if(next!=nullptr)
-        expr_type_free(*next);
+        expr_elem_free(*next);
 }

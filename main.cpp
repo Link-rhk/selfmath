@@ -54,7 +54,8 @@ int main(void){
     if(ret==1) {
         expr_list_show(*expr);
         expr_printf(*expr);
-        free(expr);
+        cout<<get_expr_len(*expr)<<"\n";
+        expr_elem_free(*expr);
     }
 
     cout<<"main.cpp end\n";
