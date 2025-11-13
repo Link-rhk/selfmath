@@ -12,10 +12,8 @@ void test_for(int (&a)[3]){
     cout<<"\n";
 }
 
-int & test(int &a){
-    a=10;
-    cout<<a<<&a<<"\n";
-    return a;
+void test(int *&a){
+    a=nullptr;
 }
 
 int main(void){
@@ -48,14 +46,29 @@ int main(void){
     c=a-b;
     c.show();
 
-    char str[]="1+(2-3)*4/5+6";
+    char str[]="1+(2-3)*4^5/6+7";
     int offset=0,loop=0,ret=0;;
-    expr_type *expr=nullptr;
-    ret=expr_build(str,strlen(str),offset,&expr,loop);
+    expr_elem *expr=nullptr;
+
+    ret=expr_build(str,strlen(str),expr);
     if(ret==1) {
         expr_list_show(*expr);
         expr_printf(*expr);
+        free(expr);
     }
+
     cout<<"main.cpp end\n";
     return 0;
-}/// + 1 + * - 2 3 / 4 5 6
+}
+/*test recode
+expr    1+2*3^4
+output  + 1 * 2 ^ 3 4
+exprr   1^2*3+4
+output  + * ^ 1 2 3 4
+expr    1+(2-3)*4^5/6
+output  + 1 * - 2 3 / ^ 4 5 6
+expr    1+2*3^4/5-6
+output  + 1 - * 2 / ^ 3 4 5 6
+expr    1+(2-3)*4^5/6+7
+output  + 1 + * - 2 3 / ^ 4 5 6 7
+*/
