@@ -1,5 +1,10 @@
-#ifndef _MATH_EXPR_H
-#define _MATH_EXPR_H
+#ifndef _MATH_EXPR_H_
+#define _MATH_EXPR_H_
+
+#include "expr_elem.h"
+/* #define CHAR_LIST_LEN_MAX 512
+int strlen_limit(char *&);
+int strcpy_limit(char *&,char *&);
 
 //The count limit of elem of expression.
 #define EXPR_BUILD_LOOP_DEEP_MAX 20
@@ -7,9 +12,10 @@
 typedef struct expr_elem_type{
     expr_elem_type *next=nullptr;
     int elem_deep=0;//recode the deep of expression.
-    unsigned char type=1;//0-char 1-int
+    unsigned char type=1;//0-char 1-int 2-label
     char oper='\n';//Binary func?expend to func?
     int numb=0;
+    char *label=nullptr;
     expr_elem_type();
     ~expr_elem_type();
 }expr_elem;
@@ -34,7 +40,15 @@ void expr_elem_free(expr_elem &);
 
 void expr_list_show(expr_elem &);
 
-void expr_printf(expr_elem &);
+void expr_printf(expr_elem &); */
+
+typedef struct expr_oper_func_type{
+    char *const label=nullptr;
+    expr_elem *const func;
+    expr_oper_func_type();
+    explicit expr_oper_func_type(char *label, expr_elem &func);
+    ~expr_oper_func_type();
+}expr_oper_func;
 
 //expression read-only
 class math_expr{
@@ -56,4 +70,4 @@ class math_expr{
     ~math_expr();
 
 };
-#endif //_MATH_EXPR_H
+#endif //_MATH_EXPR_H_

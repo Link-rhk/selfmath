@@ -55,7 +55,22 @@ int main(void){
         expr_list_show(*expr);
         expr_printf(*expr);
         cout<<get_expr_len(*expr)<<"\n";
-        expr_elem_free(*expr);
+        expr_elem_free(expr);
+    }
+
+    {
+        expr_elem *a=expr_set('+',10,"x");
+        expr_list_show(*a);
+        cout<<get_expr_len(*a)<<"\n";
+        expr_elem *b=expr_set('*',*a,5);
+        // expr_elem_free(a);
+        expr_list_show(*b);
+        cout<<get_expr_len(*b)<<"\n";
+        expr_printf(*b);
+        expr_printf(*a);
+        expr_elem_free(b);
+        expr_elem_free(a);
+        // cout<<b<<"\n";
     }
 
     cout<<"main.cpp end\n";

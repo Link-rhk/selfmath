@@ -32,3 +32,24 @@
 完成了expr_printf()函数的定义实现了函数的功能，剩余的优化工作主要为针对括号与运算符优先级的互动。
 日志-2025/11/13 15:27
 尝试在表达式的结构体中添加深度元素，用以对表达式长度的限制。
+日志-2025/11/14 16:13
+在添加算式运算逻辑是，发现需求expr_elem需要包含未知量，以完成对左右表达的计算。因此开始在expr_elem中添加label成员。同时此次添加将会记录添加时对各个函数的更改流程。
+    expr_elem_type();
+    ~expr_elem_type();
+    int expr_add_elem(expr_elem &, int , unsigned char , void *)；
+日志-2025/11/17 12:34
+在添加label成员的途中检查逻辑时发现在expr_add_elem函数中关于oper错误输入的情况未处理。现已添加。
+[after line 39]
+    expr_set函数相关函数重载
+    [before line 43]void expr_elem_free(expr_elem &);
+    [before line 43]void expr_list_show(expr_elem &);
+    void expr_elem_free(expr_elem &);
+日志-2025/11/17 14:53
+变量名与函数名区分方式。变量名保存为单独的char[]类型，而函数名称保存为结构体，具体结构待定。
+日志-2025/11/17 15:22
+[after line 46]
+    void expr_printf(expr_elem &);(working)
+    发现因为expr_set中做的是浅复制，在释放资源时会二次释放导致进程结束。
+日志-2025/11/18 16:09
+[result line 43:52]重新编写了expr_set的函数结构，同时在expr_elem作为参数输入时，复制变更为深复制。
+[result line 51]done
