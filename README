@@ -52,4 +52,12 @@
     发现因为expr_set中做的是浅复制，在释放资源时会二次释放导致进程结束。
 日志-2025/11/18 16:09
 [result line 43:52]重新编写了expr_set的函数结构，同时在expr_elem作为参数输入时，复制变更为深复制。
-[result line 51]done
+[result line 51](done)
+日志-2025/11/18 17:00
+[after line 51]
+    unsigned char expr_build(char *Istr,int len,expr_elem *&expr_head);(working)
+    尝试在函数中添加label的逻辑，发生思考变量（label）是否可以包含数字？
+        否决！变量应该以字母为主体，若要添加数字标识应该以上下角标的格式加入。同时也为变量的后续拓展方向。
+日志-2025/11/18 17:00
+[result line 58](done)
+突发奇想构建好了expr_build的非嵌套式函数的构建，开始尝试编辑。

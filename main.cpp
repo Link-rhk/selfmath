@@ -46,7 +46,7 @@ int main(void){
     c=a-b;
     c.show();
 
-    char str[]="1+(2-3)*4^5/6+7";
+    char str[]="1+(2-y)*4^x/6+7";
     int offset=0,loop=0,ret=0;;
     expr_elem *expr=nullptr;
 
@@ -58,8 +58,8 @@ int main(void){
         expr_elem_free(expr);
     }
 
-    {
-        expr_elem *a=expr_set('+',10,"x");
+/*     {
+        expr_elem *a=expr_set('+',10,"xx");
         expr_list_show(*a);
         cout<<get_expr_len(*a)<<"\n";
         expr_elem *b=expr_set('*',*a,5);
@@ -71,7 +71,7 @@ int main(void){
         expr_elem_free(b);
         expr_elem_free(a);
         // cout<<b<<"\n";
-    }
+    } */
 
     cout<<"main.cpp end\n";
     return 0;
@@ -87,4 +87,5 @@ expr    1+2*3^4/5-6
 output  + 1 - * 2 / ^ 3 4 5 6
 expr    1+(2-3)*4^5/6+7
 output  + 1 + * - 2 3 / ^ 4 5 6 7
+expr    x
 */
