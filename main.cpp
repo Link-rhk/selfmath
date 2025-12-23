@@ -46,18 +46,25 @@ int main(void){
     c=a-b;
     c.show();
 
-    char str[]="1+(2-y)*4^x/6+7";
+    char str[]="(1+(y^2*3)^4-5)/6";
     int offset=0,loop=0,ret=0;;
     expr_elem *expr=nullptr;
 
     ret=expr_build(str,strlen(str),expr);
-    if(ret==1) {
+    if(ret==0) {
         expr_list_show(*expr);
         expr_printf(*expr);
         cout<<get_expr_len(*expr)<<"\n";
         expr_elem_free(expr);
     }
 
+    ret=expr_build_ex(str,strlen(str),expr);
+    if(ret==0) {
+        expr_list_show(*expr);
+        expr_printf(*expr);
+        cout<<get_expr_len(*expr)<<"\n";
+        expr_elem_free(expr);
+    }
 /*     {
         expr_elem *a=expr_set('+',10,"xx");
         expr_list_show(*a);
@@ -73,6 +80,22 @@ int main(void){
         // cout<<b<<"\n";
     } */
 
+/*     #define TWO_FUNC(x) (1<<x)
+    {
+        cout<<"\n";
+        int i=0,len=0,count=0;;
+        char str[1024];
+        for(i=0;i<32;++i){
+            ++count;
+            sprintf(str,"%lu",TWO_FUNC(i));
+            if(strlen(str)!=len){
+                count=0;
+                len=strlen(str);
+            }
+            len=strlen(str);
+            cout<<len<<":"<<str[0]<<str[1]<<"\n";
+        }
+    } */
     cout<<"main.cpp end\n";
     return 0;
 }
@@ -87,5 +110,14 @@ expr    1+2*3^4/5-6
 output  + 1 - * 2 / ^ 3 4 5 6
 expr    1+(2-3)*4^5/6+7
 output  + 1 + * - 2 3 / ^ 4 5 6 7
-expr    x
+expr    1+(2-y)*4^x/6+7
+output  + 1 + * - 2 y / ^ 4 x 6 7
+expr    1+2*3^4-5/6
+output  + 1 - * 2 ^ 3 4 / 5 6
+expr    (1+(y)*3)^4-5/6
+output  - ^ + 1 * y 3 4 / 5 6
+expr    (1+(y^2)*3)^4-5/6
+output  - ^ + 1 * ^ y 2 3 4 / 5 6
+expr    (1+(y^2*3)^4-5)/6
+output  / + 1 - ^ * ^ y 2 3 4 5 6
 */
