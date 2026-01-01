@@ -46,7 +46,7 @@ int main(void){
     c=a-b;
     c.show();
 
-    char str[]="(1+(y^2*3)^4-5)/6";
+    char str[]="(1+(y^(2+6)*3)^4-5)/6";
     int offset=0,loop=0,ret=0;;
     expr_elem *expr=nullptr;
 
@@ -120,4 +120,8 @@ expr    (1+(y^2)*3)^4-5/6
 output  - ^ + 1 * ^ y 2 3 4 / 5 6
 expr    (1+(y^2*3)^4-5)/6
 output  / + 1 - ^ * ^ y 2 3 4 5 6
+expr    (1+(y^2+6*3)^4-5)/6
+output  / + 1 - ^ + ^ y 2 * 6 3 4 5 6
+expr    (1+(y^(2+6)*3)^4-5)/6
+output  / + 1 - ^ * ^ y + 2 6 3 4 5 6 
 */

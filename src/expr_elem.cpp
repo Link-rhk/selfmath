@@ -661,8 +661,7 @@ expr_elem *expr_link(char oper, expr_elem &expr0, expr_elem &expr1)
 
 expr_elem* get_num_from_str(char *str,int num_bit);
 expr_elem* get_label_from_str(char *str,int label_bit);
-expr_elem* find_an_expr(char *Istr,int &len,unsigned char oper_lvl);
-expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl);
+expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl,unsigned char ex_flag);
 
 static int loop_times=0;
 unsigned char expr_build(char *Istr,int len,expr_elem *&expr_head){
@@ -775,7 +774,7 @@ unsigned char expr_build(char *Istr,int len,expr_elem *&expr_head){
                 cout<<OUTPUT_INFO<<"|LEFT\n";
                 int sub_len=len-i-1;
                 //this expression is always a left-expression in this function(-loop).
-                expr_elem* tmp_expr0=find_an_expr(Istr+i+1,sub_len,oper_type);
+                expr_elem* tmp_expr0=find_a_right_expr(Istr+i+1,sub_len,oper_type,1);
                 if(tmp_expr0==nullptr){
                     cout<<OUTPUT_INFO<<"error!!\n";
                     if(left_expr==nullptr)
@@ -803,7 +802,7 @@ unsigned char expr_build(char *Istr,int len,expr_elem *&expr_head){
                 }
 
                 int sub_len=len-(i+1);//"+1" for transfor sign ot count of the str.
-                expr_elem* tmp_expr0=find_a_right_expr(Istr+i+1,sub_len,type);
+                expr_elem* tmp_expr0=find_a_right_expr(Istr+i+1,sub_len,type,0);
                 if(tmp_expr0==nullptr){
                     cout<<OUTPUT_INFO<<"error!!\n";
                     expr_elem_free(left_expr);
@@ -1584,7 +1583,7 @@ expr_elem* find_an_expr(char *Istr,int &len,unsigned char oper_lvl){
                     break;
                 } */
                 int sub_len=len-(i+1);//"+1" for transfor sign ot count of the str.
-                expr_elem* tmp_expr0=find_a_right_expr(Istr+i+1,sub_len,type);
+                expr_elem* tmp_expr0=find_a_right_expr(Istr+i+1,sub_len,type,0);
 
                 if(tmp_expr0==nullptr){
                     cout<<OUTPUT_INFO<<"error!!\n";
@@ -1652,8 +1651,9 @@ expr_elem* find_an_expr(char *Istr,int &len,unsigned char oper_lvl){
 /// @param Istr input string.
 /// @param len [input/output]the len of the string still need to read.
 /// @param oper_lvl the level of the oper.
+/// @param ex_flag the flag about find_an_expr()
 /// @return the expression found.
-expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl){
+expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl,unsigned char ex_flag){
     ++loop_times;
     if(Istr==nullptr || len==0 || oper_lvl>TYPE_LEFT){
         cout<<OUTPUT_INFO<<"error input.\n";
@@ -1661,6 +1661,8 @@ expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl){
     }
 
     expr_elem *left_expr=nullptr;
+
+    unsigned char right_flag=ex_flag;//the flag about the back of the expression will have a RIGHT.
 
     int i=0,type=0,num_bit=0,label_bit=0;
     for(i=0;i<len;++i){
@@ -1759,14 +1761,18 @@ expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl){
             }
 
             if(type==TYPE_RIGHT){//the end of an expression
-                cout<<OUTPUT_INFO<<loop_times<<"|RIGHT\n";
-                --i;
-                break;
+                if(ex_flag==0){
+                    cout<<OUTPUT_INFO<<loop_times<<"|RIGHT\n";
+                    --i;
+                    break;
+                }else{
+                    break;
+                }
             }else if(type==TYPE_LEFT){//find a new expression.
                 cout<<OUTPUT_INFO<<loop_times<<"|LEFT\n";
                 int sub_len=len-i-1;
                 //this expression is always a left-expression in this function(-loop).
-                expr_elem* tmp_expr0=find_an_expr(Istr+i+1,sub_len,oper_lvl);
+                expr_elem* tmp_expr0=find_a_right_expr(Istr+i+1,sub_len,oper_lvl,1);
                 if(tmp_expr0==nullptr){
                     cout<<OUTPUT_INFO<<"lack right expression!!\n";
                     if(left_expr!=nullptr)
@@ -1794,14 +1800,14 @@ expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl){
                     return nullptr;
                 }
 
-                cout<<OUTPUT_INFO<<(int)oper_lvl<<"|"<<type<<"\n";
-                if(oper_lvl>type){//the end of a expression.
+                cout<<OUTPUT_INFO<<(int)ex_flag<<"|"<<(int)oper_lvl<<"|"<<type<<"\n";
+                if(ex_flag==0 && oper_lvl>type){//the end of a expression.
                     --i;
                     break;
                 }
 
                 int sub_len=len-(i+1);//"+1" for transfor sign ot count of the str.
-                expr_elem* tmp_expr0=find_a_right_expr(Istr+i+1,sub_len,type);
+                expr_elem* tmp_expr0=find_a_right_expr(Istr+i+1,sub_len,type,0);
 
                 if(tmp_expr0==nullptr){
                     cout<<OUTPUT_INFO<<"error!!\n";
