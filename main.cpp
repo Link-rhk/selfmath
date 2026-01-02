@@ -46,12 +46,13 @@ int main(void){
     c=a-b;
     c.show();
 
-    char str[]="(1+(y^(2+6)*3)^4-5)/6";
+    char str[]="1/6+y^(2+6)^4*3^4/6-5/6";
     int offset=0,loop=0,ret=0;;
     expr_elem *expr=nullptr;
 
     ret=expr_build(str,strlen(str),expr);
     if(ret==0) {
+        cout<<"expr_build\n";
         expr_list_show(*expr);
         expr_printf(*expr);
         cout<<get_expr_len(*expr)<<"\n";
@@ -60,42 +61,21 @@ int main(void){
 
     ret=expr_build_ex(str,strlen(str),expr);
     if(ret==0) {
+        cout<<"expr_build_ex\n";
         expr_list_show(*expr);
         expr_printf(*expr);
         cout<<get_expr_len(*expr)<<"\n";
-        expr_elem_free(expr);
+        //expr_elem_free(expr);
     }
-/*     {
-        expr_elem *a=expr_set('+',10,"xx");
-        expr_list_show(*a);
-        cout<<get_expr_len(*a)<<"\n";
-        expr_elem *b=expr_set('*',*a,5);
-        // expr_elem_free(a);
-        expr_list_show(*b);
-        cout<<get_expr_len(*b)<<"\n";
-        expr_printf(*b);
-        expr_printf(*a);
-        expr_elem_free(b);
-        expr_elem_free(a);
-        // cout<<b<<"\n";
-    } */
 
-/*     #define TWO_FUNC(x) (1<<x)
-    {
-        cout<<"\n";
-        int i=0,len=0,count=0;;
-        char str[1024];
-        for(i=0;i<32;++i){
-            ++count;
-            sprintf(str,"%lu",TWO_FUNC(i));
-            if(strlen(str)!=len){
-                count=0;
-                len=strlen(str);
-            }
-            len=strlen(str);
-            cout<<len<<":"<<str[0]<<str[1]<<"\n";
-        }
-    } */
+    expr_elem *copy_expr_test=expr_copy(expr);
+    if(copy_expr_test!=nullptr){
+        cout<<"expr_copy\n";
+        expr_list_show(*copy_expr_test);
+        expr_printf(*copy_expr_test);
+        cout<<get_expr_len(*copy_expr_test)<<"\n";
+        expr_elem_free(copy_expr_test);
+    }
     cout<<"main.cpp end\n";
     return 0;
 }
@@ -124,4 +104,10 @@ expr    (1+(y^2+6*3)^4-5)/6
 output  / + 1 - ^ + ^ y 2 * 6 3 4 5 6
 expr    (1+(y^(2+6)*3)^4-5)/6
 output  / + 1 - ^ * ^ y + 2 6 3 4 5 6 
+expr    1/6+((y^(2+6)*3)^4-5)/6
+output  + / 1 6 / - ^ * ^ y + 2 6 3 4 5 6
+expr    1/6+(y^(2+6)*3)^4/6-5/6
+output  + / 1 6 - / ^ * ^ y + 2 6 3 4 6 / 5 6
+expr    1/6+y^(2+6)^4*3^4/6-5/6
+output  + / 1 6 - * ^ y ^ + 2 6 4 / ^ 3 4 6 / 5 6
 */

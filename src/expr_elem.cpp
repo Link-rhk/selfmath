@@ -147,7 +147,7 @@ int expr_init_elem(expr_elem &expr, int deep, unsigned char type, void *elem){
 }
 
 
-/// @brief do a deep copy for expr_elem
+/// @brief do a deep copy for expr_elem, but not copy the next-prt.
 /// @param expr [output]the output expr_elem
 /// @param deep [input]the init-deep will set
 /// @param Sexpr [input]the source expr_elem
@@ -659,6 +659,46 @@ expr_elem *expr_link(char oper, expr_elem &expr0, expr_elem &expr1)
     return expr_head;
 }
 
+expr_elem *expr_copy(expr_elem *&expr_head)
+{
+    expr_elem *expr_prt=expr_head;
+    expr_elem *expr_ret=nullptr;
+    expr_elem *expr_end=expr_ret;
+    expr_elem *tmp_expr=nullptr;
+    int ret=0,i=0;
+    while(expr_prt!=nullptr){
+        tmp_expr=new(std::nothrow) expr_elem();
+        if(tmp_expr==nullptr){
+            cout<<OUTPUT_INFO<<"malloc failed!!\n";
+            if(expr_ret!=nullptr) delete expr_ret;
+            return nullptr;
+        }
+        ret=expr_init_elem(*tmp_expr,expr_prt->elem_deep,*expr_prt);
+        if(ret==-1){
+            cout<<OUTPUT_INFO<<"error!!\n";
+            if(expr_ret!=nullptr) delete expr_ret;
+            return nullptr;
+        }
+        if(expr_ret==nullptr){
+             expr_ret=tmp_expr;
+             expr_end=tmp_expr;
+        }else{
+            expr_end->next=tmp_expr;
+            expr_end=expr_end->next;
+        }
+        tmp_expr=tmp_expr->next;
+        expr_prt=expr_prt->next;
+
+/*         if(i==20){
+            expr_list_show(expr_head);
+            expr_list_show(*expr_ret);
+            break;
+        } */
+    }
+
+    return expr_ret;
+}
+
 expr_elem* get_num_from_str(char *str,int num_bit);
 expr_elem* get_label_from_str(char *str,int label_bit);
 expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl,unsigned char ex_flag);
@@ -677,9 +717,9 @@ unsigned char expr_build(char *Istr,int len,expr_elem *&expr_head){
     int i=0,type=0,num_bit=0,label_bit=0,oper_type=TYPE_OPER_0;
     for(i=0;i<len;++i){
         type=char_Analysis(*(Istr+i));
-        cout<<OUTPUT_INFO<<*(Istr+i)<<"\n";
-        if(left_expr!=nullptr)
-            expr_list_show(*left_expr,__FUNCTION__,__LINE__);
+        //cout<<OUTPUT_INFO<<*(Istr+i)<<"\n";
+/*         if(left_expr!=nullptr)
+            expr_list_show(*left_expr,__FUNCTION__,__LINE__); */
         if(type==TYPE_MAX){
             cout<<OUTPUT_INFO<<"sign out of range\n";
             if(left_expr==nullptr)
@@ -769,9 +809,9 @@ unsigned char expr_build(char *Istr,int len,expr_elem *&expr_head){
                 cout<<OUTPUT_INFO<<"error!!\n";
                 if(left_expr==nullptr)
                     expr_elem_free(left_expr);
-                return 0;
+                return LOGIC_ERROR;
             }else if(type==TYPE_LEFT){//find a new expression.
-                cout<<OUTPUT_INFO<<"|LEFT\n";
+                //cout<<OUTPUT_INFO<<"|LEFT\n";
                 int sub_len=len-i-1;
                 //this expression is always a left-expression in this function(-loop).
                 expr_elem* tmp_expr0=find_a_right_expr(Istr+i+1,sub_len,oper_type,1);
@@ -781,8 +821,8 @@ unsigned char expr_build(char *Istr,int len,expr_elem *&expr_head){
                         expr_elem_free(left_expr);
                     return LOGIC_ERROR;
                 }
-                cout<<OUTPUT_INFO<<"|LEFT out\n";
-                expr_list_show(*tmp_expr0,__FUNCTION__,__LINE__);
+                //cout<<OUTPUT_INFO<<"|LEFT out\n";
+                //expr_list_show(*tmp_expr0,__FUNCTION__,__LINE__);
                 if(left_expr!=nullptr){// find a left_expr in front.
                     //default a '*'operation between left_expr and parentheses.
                     expr_elem *tmp_expr1=left_expr;
@@ -808,7 +848,7 @@ unsigned char expr_build(char *Istr,int len,expr_elem *&expr_head){
                     expr_elem_free(left_expr);
                     return LOGIC_ERROR;
                 }
-                expr_list_show(*tmp_expr0,__FUNCTION__,__LINE__);
+                //expr_list_show(*tmp_expr0,__FUNCTION__,__LINE__);
                 //get the expression.
                 expr_elem *tmp_expr1=left_expr;
                 left_expr=expr_set(*(Istr+i),*tmp_expr1,*tmp_expr0);
@@ -1141,6 +1181,160 @@ unsigned char expr_build_ex(char *Istr, int len, expr_elem *&expr_head)
     expr_head=expr_lists->expr;
     return 0;
 }
+/* 
+expr     "(1+(y^(2+6)*3)^4-5)/6"
+output   / + 1 - ^ * ^ y + 2 6 3 4 5 6
+                "/"   
+              /    \
+            "+"     "6"
+          /    \
+        "1"     "-"
+              /    \
+            "^"     "5"
+          /    \
+        "*"     "4"
+      /    \
+    "^"     "3"
+  /    \
+"y"     "+"
+      /    \
+    "2"     "6"
+
+expr     "1/6+((y^(2+6)*3)^4-5))/6"
+output   + / 1 6 / - ^ * ^ y + 2 6 3 4 5 6
+            "+"
+          /    \
+        "/"     "/"
+      /    \   /    \
+    "1"    "6""-"   "6"
+              / \
+            "^" "5"
+          /    \
+        "*"     "4"
+      /    \
+    "^"     "3"
+  /    \
+"y"     "+"
+      /    \
+    "2"     "6"
+
+expr     "1/6+(y^(2+6)*3)^4/6-5/6"
+output   + / 1 6 - / ^ * ^ y + 2 6 3 4 6 / 5 6
+            "+"
+          /    \
+        "/"     "-"
+      /    \   /    \
+    "1"    "6""/"   "/"
+              / \    / \
+             "^" "6""5""6"
+             /  \
+            "*" "4"
+          /    \
+        "^"     "3"
+      /    \
+    "y"     "+"
+          /    \
+        "2"     "6"
+
+expr    1/6+y^(2+6)^4*3^4/6-5/6
+output  + / 1 6 - * ^ y ^ + 2 6 4 / ^ 3 4 6 / 5 6
+            "+"
+          /    \
+        "/"     "-"
+      /    \   /    \
+    "1"    "6""*"   "/"
+              / \   / \
+             "^""/""5""6"
+            / |  | \
+          "y""^""^""6"
+            / |  | \
+          "+""4""3""4"
+          /  \
+        "2"  "6"
+
+tips:+- expend to ^ can`t keep the tree-struct in a logic transform. So do not expend in this case.
+
+expend_condition:find an oper after another oper. and the first one is higher than the second.
+
+recode_elem:
+    high_oper+H_right_expr  --> will be the left_expr an right_expr of the low_oper
+    low_oper(H_left_expr)   --> will replace the sit of high_oper used to be
+    L_left_expr             --> wiil be left_expr of the low_oper`s lefe_expr
+    L_right_expr            --> wiil be left_expr of the low_oper`s right_expr
+*/
+expr_elem *find_an_expr(expr_elem &expr_head,unsigned char copy_flag);
+expr_elem *expr_expend(expr_elem *&expr_head)
+{
+    if(expr_head==nullptr) return nullptr;
+
+    expr_elem *expr_prt=expr_head;
+    expr_elem *expr_end=nullptr;
+    expr_elem *expr_ret=nullptr;
+
+    expr_elem *expr_high=nullptr;
+    expr_elem *expr_Hright=nullptr;
+    //expr_elem *expr_low=nullptr;
+    expr_elem *expr_Lleft=nullptr;
+    //expr_elem *expr_Lright=nullptr;
+    unsigned char oper_type=0,next_flag=0;
+    while(expr_prt!=nullptr){
+        if(expr_prt->type==1){
+            if(next_flag==0){
+                oper_type=char_Analysis(expr_prt->oper);
+                expr_high=expr_prt;
+                next_flag=1;
+            }else{
+                unsigned char type=char_Analysis(expr_prt->oper);
+                if(oper_type>type){
+                    if(expr_ret==nullptr){
+                        expr_Hright=expr_find_end(*find_an_expr(*expr_high,0))->next;
+                        //expr_low=expr_prt;
+                        expr_Lleft=find_an_expr(*expr_prt,1);//deep_copy here
+                        //expr_Lright=expr_find_end(*find_an_expr(*expr_prt,0))->next;
+
+                        expr_elem *tmp_Left=expr_set(expr_high->oper,*expr_Lleft,*expr_Hright);
+                        delete expr_Lleft;
+                        if(tmp_Left==nullptr){
+                            cout<<OUTPUT_INFO<<"error!\n";
+                            return nullptr;
+                        }
+
+                        expr_elem *tmp_Right=expr_set(expr_high->oper,*expr_find_end(*find_an_expr(*expr_prt,0))->next,*expr_Hright);
+                        if(tmp_Right==nullptr){
+                            cout<<OUTPUT_INFO<<"error!\n";
+                            if(expr_ret!=nullptr) expr_elem_free(expr_ret);
+                            return nullptr;
+                        }
+
+                        expr_elem *tmp_head=expr_link(expr_prt->oper,*tmp_Left,*tmp_Right);
+                        if(tmp_head==nullptr){
+                            cout<<OUTPUT_INFO<<"error!\n";
+                            if(expr_ret!=nullptr) expr_elem_free(expr_ret);
+                            return nullptr;
+                        }
+                        expr_ret=tmp_head;
+                        expr_prt=expr_ret;
+                    }else{
+                        expr_Hright=expr_find_end(*find_an_expr(*expr_high,0))->next;
+                        //expr_low=expr_prt;
+                        expr_Lleft=find_an_expr(*expr_prt,1);//deep_copy here
+                        expr_elem *expr_Lright=expr_find_end(*find_an_expr(*expr_prt,0))->next;
+                        
+
+                    }
+                    expr_prt=expr_prt->next;
+                }
+            }
+        }else{
+            next_flag=0;
+        }
+    }
+
+    if(expr_ret==nullptr){
+        cout<<OUTPUT_INFO<<"there is nothing to expend.\n";
+    }
+    return expr_ret;
+}
 
 void expr_elem_free(expr_elem *&data)
 {
@@ -1319,12 +1513,16 @@ expr_elem_type::expr_elem_type(char *label)
 
     if(label==nullptr){
         this->label=(char*)malloc(strlen(DEFUALT_LABEL)+1);
-        sprintf(this->label,"%s",DEFUALT_LABEL);
+        if(this->label!=nullptr)
+            sprintf(this->label,"%s",DEFUALT_LABEL);
+        else
+            cout<<OUTPUT_INFO<<"malloc failed!!\n";
     }else{
         int len=strlen_limit(label,0);
         this->label=(char*)malloc(len+1);
 
-        //check the first char of the label,if it`s illegal will insert a V at the head.
+        if(this->label!=nullptr){
+        //check the first char of the label,if it`s illegal will insert a V at the first letter.
         unsigned char offset=0;
         unsigned char type=char_Analysis(*label);
         if(type==TYPE_NUM){
@@ -1338,6 +1536,9 @@ expr_elem_type::expr_elem_type(char *label)
         this->label[0]='V';
         strncpy(this->label+offset,label,len-offset);
         this->label[len]='\0';
+        }else{
+            cout<<OUTPUT_INFO<<"malloc failed!!\n";
+        }
     }
 
 }
@@ -1424,6 +1625,11 @@ int expr_set_append_expr(expr_elem &Sexpr, expr_elem *&expr){
         }
 
         deep_ret=expr_init_elem(*(write_p->next),deep_ret+1,*S_ptr);
+        if(deep_ret==-1){
+            cout<<OUTPUT_INFO<<"error!!\n";
+            expr_elem_free(expr->next);
+            return -1;
+        }
 
         write_p=write_p->next;
         S_ptr=S_ptr->next;
@@ -1431,6 +1637,57 @@ int expr_set_append_expr(expr_elem &Sexpr, expr_elem *&expr){
         if(++i==20) break;
     }
     return deep_ret;
+}
+
+/// @brief find an left-expression form expr_head. and do a deep-copy or not.
+/// @param expr_head [input] the first elem should be an oper.
+/// @param copy_flag the flag of doing a deep_copy or not
+/// @return the expression(while do deep_copy) or the end of the expression(while not do a deep_copy) been found.
+expr_elem *find_an_expr(expr_elem &expr_head, unsigned char copy_flag){
+    int count_oper=0,conut_num=0;
+    expr_elem *expr_prt=expr_head.next;//skip the first oper and find it left-expression.
+    expr_elem *expr_ret=nullptr;
+    expr_elem *expr_end=nullptr;
+    expr_elem *tmp_expr=nullptr;
+    int ret=0;
+    while(expr_prt!=nullptr){
+        if(copy_flag==1){
+            tmp_expr=new(std::nothrow) expr_elem();
+            if(tmp_expr==nullptr){
+                cout<<OUTPUT_INFO<<"malloc failed!!";
+                if(expr_ret!=nullptr)
+                    delete expr_ret;
+                return nullptr;
+            }else{
+                ret=expr_init_elem(*tmp_expr,count_oper+conut_num,*expr_prt);
+                if(ret==-1){
+                    delete tmp_expr;
+                    if(expr_ret!=nullptr)
+                        delete expr_ret;
+                }else{
+                    if(expr_ret==nullptr){
+                        expr_ret=tmp_expr;
+                        expr_end=tmp_expr;
+                    }else{
+                        expr_end->next=tmp_expr;
+                        expr_end=expr_end->next;
+                    }
+                }
+            }
+        }else{
+            expr_ret=expr_prt;
+        }
+        if(expr_prt->type==0){
+            ++count_oper;
+        }else{
+            ++conut_num;
+        }
+        if(count_oper+1==conut_num){//using the rule of the expression to find the left-expression.
+            break;
+        }
+    }
+
+    return expr_ret;
 }
 
 /// @brief find an expression in the Input string.
@@ -1512,7 +1769,11 @@ expr_elem* find_an_expr(char *Istr,int &len,unsigned char oper_lvl){
                     cout<<OUTPUT_INFO<<"malloc failed!!\n";
                     return nullptr;
                 }
-                expr_init_elem(*tmp_expr0,0,1,&num);
+                int ret=expr_init_elem(*tmp_expr0,0,1,&num);
+                if(ret==-1){
+                    cout<<OUTPUT_INFO<<"error!!\n";
+                    return nullptr;
+                }
                 num_bit=0;
 
                 if(left_expr==nullptr){
@@ -1667,7 +1928,7 @@ expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl,unsigned
     int i=0,type=0,num_bit=0,label_bit=0;
     for(i=0;i<len;++i){
         type=char_Analysis(*(Istr+i));
-        cout<<OUTPUT_INFO<<"main:"<<loop_times<<"|"<<(int)oper_lvl<<"|"<<*(Istr+i)<<"\n";
+        //cout<<OUTPUT_INFO<<"main:"<<loop_times<<"|"<<(int)oper_lvl<<"|"<<*(Istr+i)<<"\n";
         if(type==TYPE_MAX){
             cout<<OUTPUT_INFO<<"sign out of range\n";
             if(left_expr!=nullptr)
@@ -1698,7 +1959,7 @@ expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl,unsigned
                 expr_elem *tmp_expr0=get_num_from_str(Istr+i,num_bit);
                 if(tmp_expr0==nullptr){
                     cout<<OUTPUT_INFO<<"malloc failed!!\n";
-                    return 0;
+                    return nullptr;
                 }
                 num_bit=0;
 
@@ -1728,7 +1989,11 @@ expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl,unsigned
                     cout<<OUTPUT_INFO<<"malloc failed!!\n";
                     return nullptr;
                 }
-                expr_init_elem(*tmp_expr0,0,1,&num);
+                int ret=expr_init_elem(*tmp_expr0,0,1,&num);
+                if(ret==-1){
+                    cout<<OUTPUT_INFO<<"error!!\n";
+                    return nullptr;
+                }
                 num_bit=0;
 
                 if(left_expr==nullptr){
@@ -1745,7 +2010,7 @@ expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl,unsigned
                 expr_elem *tmp_expr0=get_label_from_str(Istr+i,label_bit);
                 if(tmp_expr0==nullptr){
                     cout<<OUTPUT_INFO<<"error!!\n";
-                    return 0;
+                    return nullptr;
                 }
                 label_bit=0;
 
@@ -1762,14 +2027,14 @@ expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl,unsigned
 
             if(type==TYPE_RIGHT){//the end of an expression
                 if(ex_flag==0){
-                    cout<<OUTPUT_INFO<<loop_times<<"|RIGHT\n";
+                    //cout<<OUTPUT_INFO<<loop_times<<"|RIGHT\n";
                     --i;
                     break;
                 }else{
                     break;
                 }
             }else if(type==TYPE_LEFT){//find a new expression.
-                cout<<OUTPUT_INFO<<loop_times<<"|LEFT\n";
+                //cout<<OUTPUT_INFO<<loop_times<<"|LEFT\n";
                 int sub_len=len-i-1;
                 //this expression is always a left-expression in this function(-loop).
                 expr_elem* tmp_expr0=find_a_right_expr(Istr+i+1,sub_len,oper_lvl,1);
@@ -1780,7 +2045,7 @@ expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl,unsigned
                     return nullptr;
                 }
                 //cout<<OUTPUT_INFO<<loop_times<<"\n";
-                expr_list_show(*tmp_expr0,__FUNCTION__,__LINE__);
+                //expr_list_show(*tmp_expr0,__FUNCTION__,__LINE__);
                 if(left_expr!=nullptr){// find a left_expr in front.
                     //default a '*'operation between left_expr and parentheses.
                     expr_elem *tmp_expr1=left_expr;
@@ -1800,7 +2065,7 @@ expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl,unsigned
                     return nullptr;
                 }
 
-                cout<<OUTPUT_INFO<<(int)ex_flag<<"|"<<(int)oper_lvl<<"|"<<type<<"\n";
+                //cout<<OUTPUT_INFO<<(int)ex_flag<<"|"<<(int)oper_lvl<<"|"<<type<<"\n";
                 if(ex_flag==0 && oper_lvl>type){//the end of a expression.
                     --i;
                     break;
@@ -1814,14 +2079,14 @@ expr_elem* find_a_right_expr(char *Istr,int &len,unsigned char oper_lvl,unsigned
                     expr_elem_free(left_expr);
                     return nullptr;
                 }
-                expr_list_show(*tmp_expr0,__FUNCTION__,__LINE__);
+                //expr_list_show(*tmp_expr0,__FUNCTION__,__LINE__);
 
                 //get the expression.
                 expr_elem *tmp_expr1=left_expr;
                 left_expr=expr_set(*(Istr+i),*tmp_expr1,*tmp_expr0);
                 delete tmp_expr0;
                 delete tmp_expr1;
-                expr_list_show(*left_expr,__FUNCTION__,__LINE__);
+                //expr_list_show(*left_expr,__FUNCTION__,__LINE__);
                 i=len-sub_len;//add the offset had been read.
                 //break;
                 if(sub_len==0) break;//break the for-loop for skipping ++i;
@@ -1885,7 +2150,11 @@ expr_elem* get_num_from_str(char *str,int num_bit){
         cout<<OUTPUT_INFO<<"malloc failed!!\n";
         return nullptr;
     }
-    expr_init_elem(*tmp_expr,0,1,&num);
+    int ret=expr_init_elem(*tmp_expr,0,1,&num);
+    if(ret==-1){
+        cout<<OUTPUT_INFO<<"error!!\n";
+        return nullptr;
+    }
     return tmp_expr;
 }
 
@@ -1900,8 +2169,11 @@ expr_elem* get_label_from_str(char *str,int label_bit){
         cout<<OUTPUT_INFO<<"malloc failed!!\n";
         return nullptr;
     }
-    expr_init_elem(*tmp_expr,0,2,label);
-
+    int ret=expr_init_elem(*tmp_expr,0,2,label);
+    if(ret==-1){
+        cout<<OUTPUT_INFO<<"error!!\n";
+        return nullptr;
+    }
     return tmp_expr;
 }
 

@@ -24,6 +24,7 @@ typedef struct expr_elem_type{
     expr_elem_type(char);
     expr_elem_type(int);
     expr_elem_type(char*);
+    //expr_elem_type(expr_elem&); //if make it, need to do a deep-copy of the next-prt again an again while new() maybe failed. and the error is hard to fix in a deep looping.
     ~expr_elem_type();
 }expr_elem;
 
@@ -52,6 +53,8 @@ expr_elem *expr_set(char oper,char* label, expr_elem &expr);
 expr_elem *expr_set(char oper, expr_elem &expr, char* label);
 
 expr_elem *expr_link(char oper, expr_elem &expr0, expr_elem &expr1);
+
+expr_elem *expr_copy(expr_elem *&expr_head);
 
 
 expr_elem* expr_find_end(expr_elem &);
@@ -110,6 +113,11 @@ unsigned char expr_build(char *Istr,int len,expr_elem *&expr_head);
 /// @param expr_head [output]the head-point of expr.
 /// @return the result of the func-loop. 0 compelete. 1 false.
 unsigned char expr_build_ex(char *Istr,int len,expr_elem *&expr_head);
+
+/// @brief will expend the expression.(this is a deep-copy)
+/// @param expr_head the expression will be expended.
+/// @return the expression in expended.
+expr_elem *expr_expend(expr_elem *&expr_head);
 
 void expr_elem_free(expr_elem *&);
 
