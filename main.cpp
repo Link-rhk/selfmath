@@ -68,6 +68,15 @@ int main(void){
         //expr_elem_free(expr);
     }
 
+    expr_elem *ex_expr=expr_expend(expr);
+    if(ex_expr!=nullptr) {
+        cout<<"expr_expend\n";
+        expr_list_show(*ex_expr);
+        expr_printf(*ex_expr);
+        cout<<get_expr_len(*ex_expr)<<"\n";
+        expr_elem_free(ex_expr);
+    }
+
     expr_elem *copy_expr_test=expr_copy(expr);
     if(copy_expr_test!=nullptr){
         cout<<"expr_copy\n";
@@ -101,7 +110,7 @@ output  - ^ + 1 * ^ y 2 3 4 / 5 6
 expr    (1+(y^2*3)^4-5)/6
 output  / + 1 - ^ * ^ y 2 3 4 5 6
 expr    (1+(y^2+6*3)^4-5)/6
-output  / + 1 - ^ + ^ y 2 * 6 3 4 5 6
+output  / + 1 - ^ + ^ y 2 * 6 3 4 5 60
 expr    (1+(y^(2+6)*3)^4-5)/6
 output  / + 1 - ^ * ^ y + 2 6 3 4 5 6 
 expr    1/6+((y^(2+6)*3)^4-5)/6
@@ -110,4 +119,6 @@ expr    1/6+(y^(2+6)*3)^4/6-5/6
 output  + / 1 6 - / ^ * ^ y + 2 6 3 4 6 / 5 6
 expr    1/6+y^(2+6)^4*3^4/6-5/6
 output  + / 1 6 - * ^ y ^ + 2 6 4 / ^ 3 4 6 / 5 6
+expr    1/6+y^(2+6)^4*3^4/6-5/6
+output  + / 1 6 - / * ^ ^ y + 2 6 4 ^ 3 4 6 / 5 6
 */

@@ -19,6 +19,7 @@ typedef struct expr_elem_type{
     char oper='\n';//Binary func?expend to func?
     int numb=0;
     char *label=nullptr;
+    void const show_member(void);
 
     expr_elem_type();
     expr_elem_type(char);
@@ -53,8 +54,11 @@ expr_elem *expr_set(char oper,char* label, expr_elem &expr);
 expr_elem *expr_set(char oper, expr_elem &expr, char* label);
 
 expr_elem *expr_link(char oper, expr_elem &expr0, expr_elem &expr1);
+expr_elem *expr_link(expr_elem &oper, expr_elem &expr0, expr_elem &expr1);
 
+unsigned char expr_compare(expr_elem &expr0, expr_elem &expr1);
 expr_elem *expr_copy(expr_elem *&expr_head);
+expr_elem *expr_cut(expr_elem *&expr_head, expr_elem &target);
 
 
 expr_elem* expr_find_end(expr_elem &);

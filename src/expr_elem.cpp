@@ -652,13 +652,67 @@ expr_elem *expr_link(char oper, expr_elem &expr0, expr_elem &expr1)
 #ifdef EXPR_BUILD_LOOP_DEEP_MAX
     deep_ret=expr_deep_update(*expr_head,0);
     if(deep_ret>=EXPR_BUILD_LOOP_DEEP_MAX){
-        cout<<OUTPUT_INFO<<"[WARNNING]the expression is out of limit[%s]\n",deep_ret;
+        cout<<OUTPUT_INFO<<"[WARNNING]the expression is out of limit["<<deep_ret<<"]\n";
     }
 #endif
 
     return expr_head;
 }
 
+expr_elem *expr_link(expr_elem &oper, expr_elem &expr0, expr_elem &expr1)
+{
+    expr_elem *expr_head=&oper;
+    expr_elem *write_p=expr_head;
+    write_p->next=&expr0;
+    write_p=expr_find_end(*(write_p->next));
+    
+    write_p->next=&expr1;
+
+#ifdef EXPR_BUILD_LOOP_DEEP_MAX
+    int deep_ret=expr_deep_update(*expr_head,0);
+    if(deep_ret>=EXPR_BUILD_LOOP_DEEP_MAX){
+        cout<<OUTPUT_INFO<<"[WARNNING]the expression is out of limit["<<deep_ret<<"]\n";
+    }
+#endif
+
+    return expr_head;
+}
+
+/// @brief to co mpare two expression`members but not include the next-member.
+/// @return true or false.
+unsigned char expr_compare(expr_elem &expr0, expr_elem &expr1)
+{
+/*     expr0.show_member();
+    expr1.show_member(); */
+    unsigned char ret=0;
+    if(expr0.type!=expr1.type){ 
+        cout<<OUTPUT_INFO<<(int)expr0.type<<"|"<<(int)expr1.type<<"\n";
+        return 0;
+    }
+
+    if(expr0.type==0 && expr0.oper==expr1.oper){
+        cout<<OUTPUT_INFO<<expr0.oper<<"\n";
+        ret = 1;
+    }
+    else if(expr0.type==1 && expr0.numb==expr1.numb){ 
+        cout<<OUTPUT_INFO<<expr0.numb<<"\n";
+        ret = 1;
+    }
+    else if(expr0.type==2 && 0==strcmp(expr0.label,expr1.label)){ 
+        cout<<OUTPUT_INFO<<expr0.label<<"\n";
+        ret = 1;
+    }
+#ifdef EXPR_BUILD_LOOP_DEEP_MAX
+    if(ret==1 && expr0.elem_deep!=expr1.elem_deep){ 
+        cout<<OUTPUT_INFO<<expr0.elem_deep<<"|"<<expr1.elem_deep<<"\n";
+        ret=0;
+    }
+#endif
+    cout<<OUTPUT_INFO<<(int)expr0.type<<"||"<<(int)expr1.type<<"|"<<(int)ret<<"\n";
+    return ret;
+}
+
+//it`s deep copy here.
 expr_elem *expr_copy(expr_elem *&expr_head)
 {
     expr_elem *expr_prt=expr_head;
@@ -696,6 +750,32 @@ expr_elem *expr_copy(expr_elem *&expr_head)
         } */
     }
 
+    return expr_ret;
+}
+
+/// @brief to cut an expression to two expressions by the target-expression.
+/// @param expr_head [input/ouput] the expression will be cut. and will output the head of the expression after cutting.
+/// @param target [input] the input expression will be cut by this target_elem. an it will be the first elem of the tail expression.
+/// @return the tail exprssion.
+expr_elem *expr_cut(expr_elem *&expr_head, expr_elem &target)
+{
+    expr_elem *expr_prt=expr_head;
+    expr_elem *expr_ret=nullptr;
+    if(expr_compare(*expr_prt,target)){
+        cout<<OUTPUT_INFO<<"find the cut-target at first elem!!do nothing!!\n";
+        return nullptr;
+    }
+
+    while(expr_prt->next!=nullptr){
+        if(expr_compare(*(expr_prt->next),target)){
+            expr_ret=expr_prt->next;
+            expr_prt->next=nullptr;
+            break;
+        }
+        expr_prt=expr_prt->next;
+    }
+    expr_list_show(*expr_head,__FUNCTION__,__LINE__);
+    expr_list_show(*expr_ret,__FUNCTION__,__LINE__);
     return expr_ret;
 }
 
@@ -1267,9 +1347,15 @@ expr_elem *expr_expend(expr_elem *&expr_head)
 {
     if(expr_head==nullptr) return nullptr;
 
-    expr_elem *expr_prt=expr_head;
-    expr_elem *expr_end=nullptr;
-    expr_elem *expr_ret=nullptr;
+    expr_elem *expr_ret=expr_copy(expr_head);
+    expr_elem *expr_prt=expr_ret;
+    expr_elem *expr_end=nullptr;// the end of the expression had been expend.
+    expr_elem *expr_dot=nullptr;// the first of the expression not need to expend.
+
+    if(expr_ret==nullptr){
+        cout<<OUTPUT_INFO<<"error!!\n";
+        return nullptr;
+    }
 
     expr_elem *expr_high=nullptr;
     expr_elem *expr_Hright=nullptr;
@@ -1277,61 +1363,137 @@ expr_elem *expr_expend(expr_elem *&expr_head)
     expr_elem *expr_Lleft=nullptr;
     //expr_elem *expr_Lright=nullptr;
     unsigned char oper_type=0,next_flag=0;
+    int i=0;
     while(expr_prt!=nullptr){
-        if(expr_prt->type==1){
+        ++i;
+        if(i>30) break;
+        if(expr_prt->type==0){
             if(next_flag==0){
                 oper_type=char_Analysis(expr_prt->oper);
                 expr_high=expr_prt;
                 next_flag=1;
+                cout<<OUTPUT_INFO<<(int)next_flag<<"|"<<expr_prt->oper<<"\n";
             }else{
                 unsigned char type=char_Analysis(expr_prt->oper);
-                if(oper_type>type){
-                    if(expr_ret==nullptr){
-                        expr_Hright=expr_find_end(*find_an_expr(*expr_high,0))->next;
+                cout<<OUTPUT_INFO<<(int)next_flag<<"|"<<expr_prt->oper<<"\n";
+                cout<<OUTPUT_INFO<<(int)oper_type<<"|"<<(int)type<<"\n";
+                if(oper_type==TYPE_OPER_MAX && type==TYPE_OPER_0){
+                    cout<<OUTPUT_INFO<<"+- with ^ will not expend in this function.\n";
+                }else if(oper_type>type){
+/*                     if(expr_ret==nullptr){
+                        cout<<OUTPUT_INFO<<"expend first start\n";
+                        expr_Hright=find_an_expr(*(expr_high),0)->next;
+                        expr_list_show(*expr_Hright,__FUNCTION__,__LINE__);
                         //expr_low=expr_prt;
                         expr_Lleft=find_an_expr(*expr_prt,1);//deep_copy here
-                        //expr_Lright=expr_find_end(*find_an_expr(*expr_prt,0))->next;
-
+                        expr_list_show(*expr_Lleft,__FUNCTION__,__LINE__);
+                        expr_elem *expr_Lright=find_an_expr(*expr_prt->next,1);
+                        expr_list_show(*expr_Lright,__FUNCTION__,__LINE__);
                         expr_elem *tmp_Left=expr_set(expr_high->oper,*expr_Lleft,*expr_Hright);
                         delete expr_Lleft;
                         if(tmp_Left==nullptr){
                             cout<<OUTPUT_INFO<<"error!\n";
+                            delete expr_Lleft;
+                            delete expr_Lright;
                             return nullptr;
                         }
-
-                        expr_elem *tmp_Right=expr_set(expr_high->oper,*expr_find_end(*find_an_expr(*expr_prt,0))->next,*expr_Hright);
+                        expr_list_show(*tmp_Left,__FUNCTION__,__LINE__);
+                        expr_elem *tmp_Right=expr_set(expr_high->oper,*expr_Lright,*expr_Hright);
                         if(tmp_Right==nullptr){
                             cout<<OUTPUT_INFO<<"error!\n";
-                            if(expr_ret!=nullptr) expr_elem_free(expr_ret);
+                            delete expr_Lleft;
+                            delete expr_Lright;
                             return nullptr;
                         }
-
+                        expr_list_show(*tmp_Right,__FUNCTION__,__LINE__);
                         expr_elem *tmp_head=expr_link(expr_prt->oper,*tmp_Left,*tmp_Right);
                         if(tmp_head==nullptr){
                             cout<<OUTPUT_INFO<<"error!\n";
-                            if(expr_ret!=nullptr) expr_elem_free(expr_ret);
+                            delete expr_Lleft;
+                            delete expr_Lright;
                             return nullptr;
                         }
+                        expr_list_show(*tmp_head,__FUNCTION__,__LINE__);
+                        delete expr_Lleft;
+                        delete expr_Lright;
                         expr_ret=tmp_head;
-                        expr_prt=expr_ret;
-                    }else{
-                        expr_Hright=expr_find_end(*find_an_expr(*expr_high,0))->next;
-                        //expr_low=expr_prt;
-                        expr_Lleft=find_an_expr(*expr_prt,1);//deep_copy here
-                        expr_elem *expr_Lright=expr_find_end(*find_an_expr(*expr_prt,0))->next;
-                        
+                        expr_prt=find_an_expr(*expr_ret,0);
+                        expr_high=expr_prt->next;
+                    }else */{
+                        if(nullptr != expr_cut(expr_ret,*expr_high)){
+                            expr_end=expr_find_end(*expr_ret);
+                        }else{
+                            expr_end=nullptr;
+                        }
 
+                        if(expr_end!=nullptr)
+                            expr_end->next=nullptr;
+
+
+                        cout<<OUTPUT_INFO<<"expend start\n";
+                        expr_Hright=find_an_expr(*(expr_high),0)->next;
+                        if(expr_Hright->type!=TYPE_NUM && expr_Hright->type!=TYPE_LETTER){
+                            expr_elem *tmp_expr=find_an_expr(*(expr_Hright),0);
+                            expr_dot=tmp_expr->next;
+                            tmp_expr->next=nullptr;
+                        }else{
+                            if(expr_Hright->next!=nullptr){
+                                expr_dot=expr_Hright->next;
+                                expr_Hright->next=nullptr;
+                            }
+                        }
+                        expr_list_show(*expr_Hright,__FUNCTION__,__LINE__);
+                        expr_list_show(*expr_prt,__FUNCTION__,__LINE__);
+                        //expr_low=expr_prt;
+                        expr_Lleft=find_an_expr(*(expr_prt),0);
+                        expr_list_show(*expr_Lleft,__FUNCTION__,__LINE__);
+                        expr_elem *expr_Lright=expr_Lleft->next;
+                        expr_cut(expr_Lright,*expr_Hright);
+                        expr_Lleft->next=nullptr;
+                        expr_Lleft=expr_prt->next;
+                        expr_list_show(*expr_Lleft,__FUNCTION__,__LINE__);
+                        expr_list_show(*expr_Lright,__FUNCTION__,__LINE__);
+                        expr_elem *tmp_Left=expr_link(*expr_high,*expr_Lleft,*expr_Hright);
+                        expr_list_show(*tmp_Left,__FUNCTION__,__LINE__);
+                        expr_elem *tmp_Right=expr_link(*expr_copy(expr_high),*expr_Lright,*expr_copy(expr_Hright));
+                        expr_list_show(*tmp_Right,__FUNCTION__,__LINE__);
+                        expr_elem *tmp_head=expr_link(*expr_prt,
+                            *tmp_Left,
+                            *tmp_Right
+                        );
+                        expr_list_show(*tmp_head,__FUNCTION__,__LINE__);
+
+                        if(expr_end!=nullptr){
+                            expr_end->next=tmp_head;
+                        }else{
+                            expr_ret=tmp_head;
+                        }
+
+                        if(expr_dot!=nullptr){
+                            expr_find_end(*tmp_head)->next=expr_dot;
+                            expr_dot=nullptr;
+                        }
+                        expr_prt=tmp_head->next;//sipk two opers had been expend-operation.
+                        expr_list_show(*expr_ret,__FUNCTION__,__LINE__);
+                        expr_list_show(*expr_prt,__FUNCTION__,__LINE__);
                     }
-                    expr_prt=expr_prt->next;
                 }
+                oper_type=type;
+                expr_high=expr_prt;
             }
         }else{
             next_flag=0;
         }
+
+        expr_prt=expr_prt->next;
     }
 
     if(expr_ret==nullptr){
         cout<<OUTPUT_INFO<<"there is nothing to expend.\n";
+    }else{
+#ifdef EXPR_BUILD_LOOP_DEEP_MAX
+        expr_deep_update(*expr_ret,0);
+#endif
     }
     return expr_ret;
 }
@@ -1471,6 +1633,22 @@ void expr_printf(expr_elem &expr_head){
 char *expr_result(expr_elem &expr_head){
     
     return nullptr;
+}
+
+void const expr_elem_type::show_member(void)
+{
+    cout<<this<<":type:"<<(int)type<<"\n";
+    cout<<this<<":oper:"<<oper<<"\n";
+    cout<<this<<":numb:"<<numb<<"\n";
+    cout<<this<<":elem_deep:"<<elem_deep<<"\n";
+    if(label!=nullptr)
+        cout<<this<<":label:"<<label<<"\n";
+    else
+        cout<<this<<":label"<<"\n";
+    if(next!=nullptr)
+        cout<<this<<":next:"<<next<<"\n";
+    else
+        cout<<this<<":next"<<"\n";
 }
 
 expr_elem_type::expr_elem_type()
@@ -1677,14 +1855,22 @@ expr_elem *find_an_expr(expr_elem &expr_head, unsigned char copy_flag){
         }else{
             expr_ret=expr_prt;
         }
+
         if(expr_prt->type==0){
             ++count_oper;
+            cout<<OUTPUT_INFO<<expr_prt->oper<<"\n";
         }else{
             ++conut_num;
+            if(expr_prt->type==1)
+                cout<<OUTPUT_INFO<<expr_prt->numb<<"\n";
+            else
+                cout<<OUTPUT_INFO<<expr_prt->label<<"\n";
         }
+        cout<<OUTPUT_INFO<<count_oper<<"|"<<conut_num<<"\n";
         if(count_oper+1==conut_num){//using the rule of the expression to find the left-expression.
             break;
         }
+        expr_prt=expr_prt->next;
     }
 
     return expr_ret;
